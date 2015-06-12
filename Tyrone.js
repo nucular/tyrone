@@ -114,7 +114,7 @@
     } else {
       if (inquote && op == "\\") {
         op = this.program.pop();
-        if (op == "undefined")
+        if (op == undefined)
           throw new StackError("expected escaped char on program stack");
       }
 
