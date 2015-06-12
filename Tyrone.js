@@ -17,85 +17,85 @@
 
   proto.operators = {
     "!": function() {
-    var name = this.stack.pop();
-    if (name == undefined)
-      throw new StackError("expected name on stack");
-    var value = this.stack.pop();
-    if (value == undefined)
-      throw new StackError("expected value on stack");
-    this.symbols[name] = value;
-  },
+      var name = this.stack.pop();
+      if (name == undefined)
+        throw new StackError("expected name on stack");
+      var value = this.stack.pop();
+      if (value == undefined)
+        throw new StackError("expected value on stack");
+      this.symbols[name] = value;
+    },
 
-  "?": function() {
-    var name = this.stack.pop();
-    if (!this.symbols.hasOwnProperty(name))
-      throw new SymbolError("symbol " + name + " not found");
-    var value = this.symbols[name];
-    this.stack.push(value);
-  },
-
-  "\\": function() {
-    var value = this.program.pop();
-    if (value == undefined)
-      throw new StackError("expected escaped char on program stack");
-
-    if (this.stack.length == 0) {
+    "?": function() {
+      var name = this.stack.pop();
+      if (!this.symbols.hasOwnProperty(name))
+        throw new SymbolError("symbol " + name + " not found");
+      var value = this.symbols[name];
       this.stack.push(value);
-    } else {
-      var top = this.stack.length - 1;
-      var topval = this.stack[top];
+    },
 
-      this.stack[top] = topval + value;
+    "\\": function() {
+      var value = this.program.pop();
+      if (value == undefined)
+        throw new StackError("expected escaped char on program stack");
+
+      if (this.stack.length == 0) {
+        this.stack.push(value);
+      } else {
+        var top = this.stack.length - 1;
+        var topval = this.stack[top];
+
+        this.stack[top] = topval + value;
+      }
+    },
+
+    ".": function() {
+      var value = this.stack.pop();
+      if (value == undefined)
+        throw new StackError("expected code on stack");
+      var program = value.split("").reverse();
+      this.program = this.program.concat(program);
+    },
+
+    ":": function() {
+      var name = this.stack.pop();
+      if (!this.symbols.hasOwnProperty(name))
+        throw new SymbolError("symbol " + name + " not found");
+      var value = this.symbols[name];
+      var program = value.split("").reverse();
+      this.program = this.program.concat(program);
+    },
+
+    ",": function() {
+      this.stack.push("");
+    },
+
+    ";": function() {
+      var name = this.stack.pop();
+      if (!this.symbols.hasOwnProperty(name))
+        throw new StackError("symbol " + name + " not found");
+      var value = this.symbols[name];
+      this.stack.push(value);
+      this.stack.push("");
+    },
+
+    "'": function() {
+      this.quoted = !this.quoted;
+    },
+
+    "\"": function() {
+      this.doublequoted = !this.doublequoted;
+    },
+
+    "(": function() {
+      if (!this.quoted && !this.doublequoted)
+        this.commented = true;
+    },
+
+    ")": function() {
+      if (!this.quoted && !this.doublequoted)
+        this.commented = false;
     }
-  },
-
-  ".": function() {
-    var value = this.stack.pop();
-    if (value == undefined)
-      throw new StackError("expected code on stack");
-    var program = value.split("").reverse();
-    this.program = this.program.concat(program);
-  },
-
-  ":": function() {
-    var name = this.stack.pop();
-    if (!this.symbols.hasOwnProperty(name))
-      throw new SymbolError("symbol " + name + " not found");
-    var value = this.symbols[name];
-    var program = value.split("").reverse();
-    this.program = this.program.concat(program);
-  },
-
-  ",": function() {
-    this.stack.push("");
-  },
-
-  ";": function() {
-    var name = this.stack.pop();
-    if (!this.symbols.hasOwnProperty(name))
-      throw new StackError("symbol " + name + " not found");
-    var value = this.symbols[name];
-    this.stack.push(value);
-    this.stack.push("");
-  },
-
-  "'": function() {
-    this.quoted = !this.quoted;
-  },
-
-  "\"": function() {
-    this.doublequoted = !this.doublequoted;
-  },
-
-  "(": function() {
-    if (!this.quoted && !this.doublequoted)
-      this.commented = true;
-  },
-
-  ")": function() {
-    if (!this.quoted && !this.doublequoted)
-      this.commented = false;
-  }
 }
 
   proto.cycle = function() {
@@ -112,6 +112,12 @@
     if (!inquote && this.operators.hasOwnProperty(op)) {
       this.operators[op].apply(this);
     } else {
+      if (inquote && op == "\\") {
+        op = this.program.pop();
+        if (op == "undefined")
+          throw new StackError("expected escaped char on program stack");
+      }
+
       if (this.stack.length == 0) {
         this.stack.push(op);
       } else {
