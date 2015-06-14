@@ -1,0 +1,6 @@
+",'console.debug(T.stack.pop())', js_exec:", debug!
+",'console.log(T.stack.pop())', js_exec:", log!
+",'console.warn(T.stack.pop())', js_exec:", warn!
+",'console.error(T.stack.pop())', js_exec:", error!
+
+",'console.clear()', js_exec:", clear!

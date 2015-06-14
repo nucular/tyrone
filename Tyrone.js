@@ -19,6 +19,10 @@
   Tyrone.modules = {};
   Tyrone.modulepath = [".", "stdlib"];
 
+  Tyrone.GET = 0;
+  Tyrone.SET = 0;
+  Tyrone.CALL = 0;
+
   Tyrone.operators = {
     "!": function() {
       var name = this.stack.pop();
@@ -27,7 +31,12 @@
       var value = this.stack.pop();
       if (value == undefined)
         throw new StackError("expected value on stack");
-      this.context[name] = value;
+
+      if (typeof this.context[name] == "function") {
+        this.context[name](this, Tyrone.SET);
+      } else {
+        this.context[name] = value;
+      }
       this.context = this.symbols;
     },
 
@@ -37,7 +46,12 @@
         throw new SymbolError("symbol " + name + " not found");
       var value = this.context[name];
       this.context = this.symbols;
-      this.stack.push(value);
+
+      if (typeof value == "function") {
+        value(this, Tyrone.GET);
+      } else {
+        this.stack.push(value);
+      }
     },
 
     "\\": function() {
@@ -67,10 +81,15 @@
       var name = this.stack.pop();
       if (!this.context.hasOwnProperty(name))
         throw new SymbolError("symbol " + name + " not found");
-      var value = this.symbols[name];
+      var value = this.context[name];
       this.context = this.symbols;
-      var program = value.split("").reverse();
-      this.program = this.program.concat(program);
+
+      if (typeof value == "function") {
+        value(this, Tyrone.CALL);
+      } else {
+        var program = value.split("").reverse();
+        this.program = this.program.concat(program);
+      }
     },
 
     ",": function() {
@@ -83,7 +102,12 @@
         throw new StackError("symbol " + name + " not found");
       var value = this.context[name];
       this.context = this.symbols;
-      this.stack.push(value);
+
+      if (typeof value == "function") {
+        value(this, Tyrone.GET);
+      } else {
+        this.stack.push(value);
+      }
       this.stack.push("");
     },
 
@@ -109,12 +133,15 @@
       var name = this.stack.pop();
       if (name == "" || name == "root")
         this.context = this.getRoot();
-      if (!Tyrone.modules.hasOwnProperty(name)) {
-        var module = this.import(name);
-        Tyrone.modules[name] = module;
-      }
+
+      this.import(name);
       this.context = Tyrone.modules[name];
-    }
+
+      this.stack.push("");
+    },
+
+    " ": function() { },
+    "\n": function() { }
 }
 
   proto.cycle = function() {
@@ -170,14 +197,18 @@
       return this.parent.getRoot();
   }
 
-  proto.import = function(name) {
+  proto.import = function(name, force) {
+    if (!force && Tyrone.modules.hasOwnProperty(name))
+      return Tyrone.modules[name];
+
     var loadJS = function(path) {
       var xhr = new XMLHttpRequest();
       xhr.open("GET", path, false);
       xhr.send(null);
 
       if (xhr.status == 200) {
-        Tyrone.modules[name] = eval(xhr.responseText);
+        var mod = (new Function("L", xhr.responseText))(this);
+        Tyrone.modules[name] = mod;
         return true;
       } else {
         return false;
@@ -210,6 +241,8 @@
 
     if (!Tyrone.modules.hasOwnProperty(name))
       throw new ImportError("module " + name + " not found");
+    else
+      return Tyrone.modules[name];
   }
 
 
