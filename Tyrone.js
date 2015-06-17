@@ -20,8 +20,8 @@
   Tyrone.modulepath = [".", "stdlib"];
 
   Tyrone.GET = 0;
-  Tyrone.SET = 0;
-  Tyrone.CALL = 0;
+  Tyrone.SET = 1;
+  Tyrone.CALL = 3;
 
   Tyrone.operators = {
     "!": function() {
