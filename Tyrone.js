@@ -5,10 +5,10 @@
     this.program = (code ? code.split("").reverse() : []);
     this.parent = parent || null;
 
-    this.symbols = {};
+    this.macros = {};
     this.stack = [];
 
-    this.context = this.symbols;
+    this.context = this.macros;
 
     this.commented = false;
     this.quoted = false;
@@ -27,25 +27,27 @@
     "!": function() {
       var name = this.stack.pop();
       if (name == undefined)
-        throw new StackError("expected name on stack");
+        throw new StackError("expected macro name on stack");
       var value = this.stack.pop();
       if (value == undefined)
-        throw new StackError("expected value on stack");
+        throw new StackError("expected macro value on stack");
 
       if (typeof this.context[name] == "function") {
         this.context[name](this, Tyrone.SET);
       } else {
         this.context[name] = value;
       }
-      this.context = this.symbols;
+      this.context = this.macros;
     },
 
     "?": function() {
       var name = this.stack.pop();
+      if (name == undefined)
+        throw new StackError("expected macro name on stack")
       if (!this.context.hasOwnProperty(name))
-        throw new SymbolError("symbol " + name + " not found");
+        throw new MacroError("macro " + name + " not found");
       var value = this.context[name];
-      this.context = this.symbols;
+      this.context = this.macros;
 
       if (typeof value == "function") {
         value(this, Tyrone.GET);
@@ -72,17 +74,19 @@
     ".": function() {
       var value = this.stack.pop();
       if (value == undefined)
-        throw new StackError("expected code on stack");
+        throw new StackError("expected program literal on stack");
       var program = value.split("").reverse();
       this.program = this.program.concat(program);
     },
 
     ":": function() {
       var name = this.stack.pop();
+      if (name == undefined)
+        throw new StackError("expected macro name on stack");
       if (!this.context.hasOwnProperty(name))
-        throw new SymbolError("symbol " + name + " not found");
+        throw new MacroError("macro " + name + " not found");
       var value = this.context[name];
-      this.context = this.symbols;
+      this.context = this.macros;
 
       if (typeof value == "function") {
         value(this, Tyrone.CALL);
@@ -99,9 +103,9 @@
     ";": function() {
       var name = this.stack.pop();
       if (!this.context.hasOwnProperty(name))
-        throw new StackError("symbol " + name + " not found");
+        throw new StackError("macro " + name + " not found");
       var value = this.context[name];
-      this.context = this.symbols;
+      this.context = this.macros;
 
       if (typeof value == "function") {
         value(this, Tyrone.GET);
@@ -131,6 +135,8 @@
 
     "_": function() {
       var name = this.stack.pop();
+      if (name == undefined)
+        throw new StackError("expected module name on stack");
       if (name == "" || name == "root")
         this.context = this.getRoot();
 
@@ -223,7 +229,7 @@
       if (xhr.status == 200) {
         var mod = new Tyrone(xhr.responseText);
         mod.exec();
-        Tyrone.modules[name] = mod.symbols;
+        Tyrone.modules[name] = mod.macros;
         return true;
       } else {
         return false;
@@ -249,9 +255,9 @@
   var ErrorInheritor = function() {}
   ErrorInheritor.prototype = Error.prototype;
 
-  var SymbolError = Tyrone.SymbolError || function() {
+  var MacroError = Tyrone.MacroError || function() {
     var tmp = Error.apply(this, arguments);
-    tmp.name = this.name = "SymbolError";
+    tmp.name = this.name = "MacroError";
     this.message = tmp.message;
     Object.defineProperty(this, "stack", {
       get: function() {
@@ -260,8 +266,8 @@
     });
     return this;
   }
-  SymbolError.prototype = new ErrorInheritor();
-  Tyrone.SymbolError = SymbolError;
+  MacroError.prototype = new ErrorInheritor();
+  Tyrone.MacroError = MacroError;
 
   var StackError = Tyrone.StackError || function() {
     var tmp = Error.apply(this, arguments);
