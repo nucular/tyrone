@@ -1,5 +1,6 @@
 $(function() {
   var tyr = new Tyrone();
+  var md = window.markdownit();
 
   // Overwrite the console functions
   var ocon = {};
@@ -116,6 +117,8 @@ $(function() {
 
   // Show the readme
   $.get("README.md", function(res) {
-    console.log(res);
+    $("#console").prepend($('<pre class="console info"></pre>').append(
+      md.render(res)
+    ));
   });
 });
