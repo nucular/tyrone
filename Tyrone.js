@@ -74,7 +74,7 @@
     ".": function() {
       var value = this.stack.pop();
       if (value == undefined)
-        throw new StackError("expected program literal on stack");
+        throw new StackError("expected code literal on stack");
       var program = value.split("").reverse();
       this.program = this.program.concat(program);
     },
@@ -144,6 +144,22 @@
       this.context = Tyrone.modules[name];
 
       this.stack.push("");
+    },
+
+    "^": function() {
+      var opname = this.stack.pop();
+      if (opname == undefined)
+        throw new StackError("expected operator char on stack");
+      if (opname.length != 1)
+        throw new ValueError("operator must be exactly 1 char");
+      var value = this.stack.pop();
+      if (value == undefined)
+        throw new StackError("expected code literal on stack");
+
+      var program = value.split("").reverse();
+      Tyrone.operators[opname] = function() {
+        this.program = this.program.concat(program);
+      }
     },
 
     " ": function() { },
@@ -294,8 +310,22 @@
     });
     return this;
   }
-  StackError.prototype = new ErrorInheritor();
-  Tyrone.StackError = StackError;
+  ImportError.prototype = new ErrorInheritor();
+  Tyrone.ImportError = ImportError;
+
+  var ValueError = Tyrone.ValueError || function() {
+    var tmp = Error.apply(this, arguments);
+    tmp.name = this.name = "ValueError";
+    this.message = tmp.message;
+    Object.defineProperty(this, "stack", {
+      get: function() {
+        return tmp.stack;
+      }
+    });
+    return this;
+  }
+  ValueError.prototype = new ErrorInheritor();
+  Tyrone.ValueError = ValueError;
 
   ns.Tyrone = Tyrone;
 
